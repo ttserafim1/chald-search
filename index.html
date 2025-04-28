@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chald Search</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Theme Variables */
+        :root {
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --text: #1e293b;
+            --text-secondary: #64748b;
+            --bg: #f8fafc;
+            --bg-secondary: #e2e8f0;
+            --border: #e2e8f0;
+            --card-bg: #ffffff;
+            --settings-text: #1e293b;
+            --settings-bg: #ffffff;
+        }
+
+        .dark {
+            --primary: #60a5fa;
+            --primary-hover: #3b82f6;
+            --text: #f8fafc;
+            --text-secondary: #94a3b8;
+            --bg: #0f172a;
+            --bg-secondary: #1e293b;
+            --border: #334155;
+            --card-bg: #1e293b;
+            --settings-text: #f8fafc;
+            --settings-bg: #1e293b;
+        }
+
+        .ocean {
+            --primary: #38bdf8;
+            --primary-hover: #0ea5e9;
+            --text: #e0f2fe;
+            --text-secondary: #7dd3fc;
+            --bg: #0e1e2b;
+            --bg-secondary: #1a3a4a;
+            --border: #1a3a4a;
+            --card-bg: #1a3a4a;
+            --settings-text: #e0f2fe;
+            --settings-bg: #1a3a4a;
+        }
+
+        .forest {
+            --primary: #84cc16;
+            --primary-hover: #65a30d;
+            --text: #ecfccb;
+            --text-secondary: #bef264;
+            --bg: #1a2e05;
+            --bg-secondary: #2c4a0a;
+            --border: #365314;
+            --card-bg: #2c4a0a;
+            --settings-text: #ecfccb;
+            --settings-bg: #2c4a0a;
+        }
+
+        .midnight {
+            --primary: #8b5cf6;
+            --primary-hover: #7c3aed;
+            --text: #ede9fe;
+            --text-secondary: #a78bfa;
+            --bg: #1e1b4b;
+            --bg-secondary: #312e81;
+            --border: #4c1d95;
+            --card-bg: #312e81;
+            --settings-text: #ede9fe;
+            --settings-bg: #312e81;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            transition: all 0.3s ease;
+        }
+
+        .search-box {
+            background-color: var(--card-bg);
+            border-color: var(--border);
+        }
+
+        .search-result {
+            background-color: var(--card-bg);
+            border-color: var(--border);
+        }
+
+        .theme-selector.active {
+            outline: 2px solid var(--primary);
+        }
+
+        .provider-btn.active {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .in-dev-badge {
+            position: relative;
+        }
+
+        .in-dev-badge::after {
+            content: "In Development";
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background-color: #f59e0b;
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 9999px;
+        }
+
+        /* Animation for search results */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-item {
+            animation: fadeIn 0.3s ease forwards;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+        }
+
+        /* Settings panel */
+        .settings-panel {
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            background-color: var(--settings-bg);
+            color: var(--settings-text);
+        }
+
+        .settings-panel.open {
+            transform: translateX(0);
+        }
+
+        .settings-panel select,
+        .settings-panel input[type="checkbox"] {
+            background-color: var(--primary);
+            color: var(--settings-text);
+        }
+
+        .settings-panel .toggle-checkbox {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            width: 40px;
+            height: 20px;
+            background: var(--border);
+            border-radius: 20px;
+            position: relative;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .settings-panel .toggle-checkbox:checked {
+            background: var(--primary);
+        }
+
+        .settings-panel .toggle-checkbox:before {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: white;
+            top: 2px;
+            left: 2px;
+            transition: 0.3s;
+        }
+
+        .settings-panel .toggle-checkbox:checked:before {
+            left: 22px;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 640px) {
+            .provider-tabs {
+                overflow-x: auto;
+                white-space: nowrap;
+                padding-bottom: 8px;
+            }
+            
+            .search-box {
+                padding-left: 3rem;
+                padding-right: 3rem;
+            }
+        }
+
+        /* Loading spinner */
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="dark">
+    <div class="container mx-auto px-4 py-8 min-h-screen">
+        <!-- Header with logo and quick actions -->
+        <header class="flex justify-between items-center mb-8">
+            <div class="flex items-center space-x-2">
+                <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center">
+                    <i class="fas fa-search text-white"></i>
+                </div>
+                <h1 class="text-2xl font-bold">Chald</h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button id="quick-settings-btn" class="p-2 rounded-full hover:bg-secondary transition-colors">
+                    <i class="fas fa-sliders-h"></i>
+                </button>
+                <button id="theme-toggle" class="p-2 rounded-full hover:bg-secondary transition-colors">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main search area -->
+        <main class="max-w-3xl mx-auto">
+            <div class="flex flex-col items-center mb-8">
+                <!-- Search provider tabs -->
+                <div class="flex space-x-2 mb-4 provider-tabs w-full">
+                    <button data-provider="google" class="provider-btn active px-4 py-2 rounded-lg flex items-center transition-colors">
+                        <img src="https://www.google.com/favicon.ico" class="w-4 h-4 mr-2" alt="Google">
+                        Google
+                    </button>
+                    <button data-provider="yandex" class="provider-btn px-4 py-2 rounded-lg flex items-center transition-colors">
+                        <img src="https://yastatic.net/iconostasis/_/8lFaTHLDzmsEZz-5XaQg9iTWZGE.png" class="w-4 h-4 mr-2" alt="Yandex">
+                        Yandex
+                    </button>
+                    <button data-provider="bing" class="provider-btn px-4 py-2 rounded-lg flex items-center transition-colors">
+                        <img src="https://www.bing.com/favicon.ico" class="w-4 h-4 mr-2" alt="Bing">
+                        Bing
+                    </button>
+                    <button data-provider="duckduckgo" class="provider-btn px-4 py-2 rounded-lg flex items-center transition-colors">
+                        <img src="https://duckduckgo.com/favicon.ico" class="w-4 h-4 mr-2" alt="DuckDuckGo">
+                        DuckDuckGo
+                    </button>
+                    <button data-provider="chald" class="provider-btn px-4 py-2 rounded-lg flex items-center in-dev-badge transition-colors">
+                        <i class="fas fa-wrench mr-2"></i>
+                        Chald
+                    </button>
+                </div>
+
+                <!-- Search box -->
+                <div class="relative w-full mb-4">
+                    <input type="text" id="search-input" 
+                        class="w-full p-4 pl-12 pr-12 rounded-full search-box focus:outline-none focus:ring-2 focus:ring-primary transition-colors" 
+                        placeholder="Search the web..." autocomplete="off">
+                    <div class="absolute left-4 top-4 text-secondary">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <button id="clear-search" class="absolute right-4 top-4 text-secondary hover:text-primary transition-colors hidden">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <!-- Search buttons -->
+                <div class="flex space-x-4">
+                    <button id="search-btn" class="px-6 py-2 rounded-full bg-primary text-white hover:bg-primary-hover transition-colors flex items-center">
+                        <span id="search-btn-text">Chald Search</span>
+                        <div id="search-spinner" class="spinner ml-2 hidden"></div>
+                    </button>
+                    <button id="lucky-btn" class="px-6 py-2 rounded-full bg-secondary hover:bg-opacity-90 transition-colors">
+                        I'm Feeling Lucky
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quick tips -->
+            <div class="text-center text-secondary mb-8">
+                <p>Try: <span class="text-primary cursor-pointer hover:underline">weather in Moscow</span> • 
+                <span class="text-primary cursor-pointer hover:underline">translate hello to french</span> • 
+                <span class="text-primary cursor-pointer hover:underline">10 USD to EUR</span></p>
+            </div>
+
+            <!-- Results container -->
+            <div id="results-container" class="hidden">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center">
+                        <span class="text-secondary mr-2">Results from:</span>
+                        <span id="current-provider" class="font-medium"></span>
+                    </div>
+                    <div class="text-secondary" id="result-count"></div>
+                </div>
+                
+                <div id="search-results" class="space-y-4">
+                    <!-- Results will be inserted here -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Settings panel -->
+    <div id="settings-panel" class="settings-panel fixed inset-y-0 right-0 w-80 bg-secondary z-50 overflow-y-auto shadow-xl">
+        <div class="p-6 h-full flex flex-col">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold">Settings</h2>
+                <button id="close-settings" class="text-secondary hover:text-primary transition-colors">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto">
+                <!-- Search settings -->
+                <div class="mb-6">
+                    <h3 class="font-medium mb-3 flex items-center">
+                        <i class="fas fa-search mr-2"></i> Search Settings
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between p-3 rounded hover:bg-opacity-20 hover:bg-primary transition-colors">
+                            <div class="flex items-center">
+                                <i class="fas fa-shield-alt mr-3 text-secondary"></i>
+                                <label for="safe-search">Safe Search</label>
+                            </div>
+                            <input type="checkbox" id="safe-search" class="rounded toggle-checkbox">
+                        </div>
+                        <div class="flex items-center justify-between p-3 rounded hover:bg-opacity-20 hover:bg-primary transition-colors">
+                            <div class="flex items-center">
+                                <i class="fas fa-bolt mr-3 text-secondary"></i>
+                                <label for="instant-results">Instant Results</label>
+                            </div>
+                            <input type="checkbox" id="instant-results" class="rounded toggle-checkbox">
+                        </div>
+                        <div class="flex items-center justify-between p-3 rounded hover:bg-opacity-20 hover:bg-primary transition-colors">
+                            <div class="flex items-center">
+                                <i class="fas fa-lightbulb mr-3 text-secondary"></i>
+                                <label for="search-suggestions">Search Suggestions</label>
+                            </div>
+                            <input type="checkbox" id="search-suggestions" class="rounded toggle-checkbox">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Appearance -->
+                <div class="mb-6">
+                    <h3 class="font-medium mb-3 flex items-center">
+                        <i class="fas fa-paint-brush mr-2"></i> Appearance
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="p-3 rounded hover:bg-opacity-20 hover:bg-primary transition-colors">
+                            <label class="block mb-2">Theme</label>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button data-theme="light" class="theme-selector p-2 rounded bg-white text-gray-800 flex flex-col items-center">
+                                    <i class="fas fa-sun mb-1"></i>
+                                    Light
+                                </button>
+                                <button data-theme="dark" class="theme-selector p-2 rounded bg-gray-900 text-white flex flex-col items-center active">
+                                    <i class="fas fa-moon mb-1"></i>
+                                    Dark
+                                </button>
+                                <button data-theme="ocean" class="theme-selector p-2 rounded bg-blue-900 text-blue-100 flex flex-col items-center">
+                                    <i class="fas fa-water mb-1"></i>
+                                    Ocean
+                                </button>
+                                <button data-theme="forest" class="theme-selector p-2 rounded bg-green-900 text-green-100 flex flex-col items-center">
+                                    <i class="fas fa-tree mb-1"></i>
+                                    Forest
+                                </button>
+                                <button data-theme="midnight" class="theme-selector p-2 rounded bg-indigo-900 text-indigo-100 flex flex-col items-center">
+                                    <i class="fas fa-stars mb-1"></i>
+                                    Midnight
+                                </button>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between p-3 rounded hover:bg-opacity-20 hover:bg-primary transition-colors">
+                            <div class="flex items-center">
+                                <i class="fas fa-text-height mr-3 text-secondary"></i>
+                                <label for="font-size">Font Size</label>
+                            </div>
+                            <select id="font-size" class="p-1 rounded bg-primary">
+                                <option value="small">Small</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="large">Large</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Language -->
+                <div class="mb-6">
+                    <h3 class="font-medium mb-3 flex items-center">
+                        <i class="fas fa-language mr-2"></i> Language
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between p-3 rounded hover:bg-opacity-20 hover:bg-primary transition-colors">
+                            <div class="flex items-center">
+                                <i class="fas fa-globe mr-3 text-secondary"></i>
+                                <label for="search-language">Search Language</label>
+                            </div>
+                            <select id="search-language" class="p-1 rounded bg-primary">
+                                <option value="en">English</option>
+                                <option value="ru">Русский</option>
+                                <option value="es">Español</option>
+                                <option value="fr">Français</option>
+                                <option value="de">Deutsch</option>
+                                <option value="ja">日本語</option>
+                                <option value="zh">中文</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center justify-between p-3 rounded hover:bg-opacity-20 hover:bg-primary transition-colors">
+                            <div class="flex items-center">
+                                <i class="fas fa-desktop mr-3 text-secondary"></i>
+                                <label for="ui-language">Interface Language</label>
+                            </div>
+                            <select id="ui-language" class="p-1 rounded bg-primary">
+                                <option value="en">English</option>
+                                <option value="ru">Русский</option>
+                                <option value="es">Español</option>
+                                <option value="fr">Français</option>
+                                <option value="de">Deutsch</option>
+                                <option value="ja">日本語</option>
+                                <option value="zh">中文</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Default Search -->
+                <div class="mb-6">
+                    <h3 class="font-medium mb-3 flex items-center">
+                        <i class="fas fa-search mr-2"></i> Default Search
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="p-3 rounded hover:bg-opacity-20 hover:bg-primary transition-colors">
+                            <label class="block mb-2">Default Search Engine</label>
+                            <select id="default-provider" class="w-full p-2 rounded bg-primary">
+                                <option value="google">Google</option>
+                                <option value="yandex">Yandex</option>
+                                <option value="bing">Bing</option>
+                                <option value="duckduckgo">DuckDuckGo</option>
+                                <option value="chald">Chald</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Advanced -->
+                <div>
+                    <h3 class="font-medium mb-3 flex items-center">
+                        <i class="fas fa-cogs mr-2"></i> Advanced
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between p-3 rounded hover:bg-opacity-20 hover:bg-primary transition-colors">
+                            <div class="flex items-center">
+                                <i class="fas fa-list-ol mr-3 text-secondary"></i>
+                                <label for="results-per-page">Results per page</label>
+                            </div>
+                            <select id="results-per-page" class="p-1 rounded bg-primary">
+                                <option value="10">10</option>
+                                <option value="20" selected>20</option>
+                                <option value="30">30</option>
+                                <option value="50">50</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center justify-between p-3 rounded hover:bg-opacity-20 hover:bg-primary transition-colors">
+                            <div class="flex items-center">
+                                <i class="fas fa-code mr-3 text-secondary"></i>
+                                <label for="developer-mode">Developer Mode</label>
+                            </div>
+                            <input type="checkbox" id="developer-mode" class="rounded toggle-checkbox">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer with version info -->
+            <div class="pt-4 mt-auto border-t border-opacity-20 border-primary">
+                <div class="text-sm text-secondary text-center">
+                    <p>Chald Search v1.0.0</p>
+                    <p class="text-xs mt-1">© 2023 Chald. All rights reserved.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overlay for settings panel -->
+    <div id="settings-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden"></div>
+
+    <script>
+        // Search providers configuration
+        const searchProviders = {
+            google: {
+                name: "Google",
+                icon: "https://www.google.com/favicon.ico",
+                searchUrl: "https://www.google.com/search?q={query}&hl={lang}&safe={safe}",
+                luckyUrl: "https://www.google.com/search?q={query}&btnI=I'm+Feeling+Lucky&hl={lang}&safe={safe}",
+                suggestionsUrl: "https://suggestqueries.google.com/complete/search?client=firefox&q={query}&hl={lang}"
+            },
+            yandex: {
+                name: "Yandex",
+                icon: "https://yastatic.net/iconostasis/_/8lFaTHLDzmsEZz-5XaQg9iTWZGE.png",
+                searchUrl: "https://yandex.com/search/?text={query}&lang={lang}",
+                luckyUrl: "https://yandex.com/search/?text={query}&lang={lang}",
+                suggestionsUrl: "https://suggest.yandex.com/suggest-ff.cgi?part={query}&uil={lang}"
+            },
+            bing: {
+                name: "Bing",
+                icon: "https://www.bing.com/favicon.ico",
+                searchUrl: "https://www.bing.com/search?q={query}&setlang={lang}",
+                luckyUrl: "https://www.bing.com/search?q={query}&go=Feeling+Lucky&setlang={lang}",
+                suggestionsUrl: "https://api.bing.com/osjson.aspx?query={query}"
+            },
+            duckduckgo: {
+                name: "DuckDuckGo",
+                icon: "https://duckduckgo.com/favicon.ico",
+                searchUrl: "https://duckduckgo.com/?q={query}&kl={lang}",
+                luckyUrl: "https://duckduckgo.com/?q={query}&kl={lang}",
+                suggestionsUrl: "https://ac.duckduckgo.com/ac/?q={query}&type=list"
+            },
+            chald: {
+                name: "Chald Search",
+                icon: "",
+                searchUrl: "#",
+                luckyUrl: "#",
+                suggestionsUrl: ""
+            }
+        };
+
+        // Translation dictionary
+        const translations = {
+            en: {
+                searchPlaceholder: "Search the web...",
+                searchBtn: "Search",
+                feelingLucky: "I'm Feeling Lucky",
+                resultsFrom: "Results from:",
+                aboutResults: "About {count} results",
+                settings: "Settings",
+                searchSettings: "Search Settings",
+                safeSearch: "Safe Search",
+                instantResults: "Instant Results",
+                searchSuggestions: "Search Suggestions",
+                appearance: "Appearance",
+                theme: "Theme",
+                light: "Light",
+                dark: "Dark",
+                ocean: "Ocean",
+                forest: "Forest",
+                midnight: "Midnight",
+                fontSize: "Font Size",
+                small: "Small",
+                medium: "Medium",
+                large: "Large",
+                language: "Language",
+                searchLanguage: "Search Language",
+                uiLanguage: "Interface Language",
+                defaultSearch: "Default Search",
+                defaultEngine: "Default Search Engine",
+                advanced: "Advanced",
+                resultsPerPage: "Results per page",
+                developerMode: "Developer Mode",
+                version: "Chald Search v1.0.0",
+                copyright: "© 2023 Chald. All rights reserved."
+            },
+            ru: {
+                searchPlaceholder: "Поиск в интернете...",
+                searchBtn: "Поиск",
+                feelingLucky: "Мне повезёт",
+                resultsFrom: "Результаты от:",
+                aboutResults: "Примерно {count} результатов",
+                settings: "Настройки",
+                searchSettings: "Настройки поиска",
+                safeSearch: "Безопасный поиск",
+                instantResults: "Мгновенные результаты",
+                searchSuggestions: "Подсказки поиска",
+                appearance: "Внешний вид",
+                theme: "Тема",
+                light: "Светлая",
+                dark: "Тёмная",
+                ocean: "Океан",
+                forest: "Лес",
+                midnight: "Полночь",
+                fontSize: "Размер шрифта",
+                small: "Маленький",
+                medium: "Средний",
+                large: "Большой",
+                language: "Язык",
+                searchLanguage: "Язык поиска",
+                uiLanguage: "Язык интерфейса",
+                defaultSearch: "Поиск по умолчанию",
+                defaultEngine: "Поисковая система по умолчанию",
+                advanced: "Дополнительно",
+                resultsPerPage: "Результатов на странице",
+                developerMode: "Режим разработчика",
+                version: "Chald Search v1.0.0",
+                copyright: "© 2023 Chald. Все права защищены."
+            },
+            es: {
+                searchPlaceholder: "Buscar en la web...",
+                searchBtn: "Buscar",
+                feelingLucky: "Voy a tener suerte",
+                resultsFrom: "Resultados de:",
+                aboutResults: "Aproximadamente {count} resultados",
+                settings: "Configuración",
+                searchSettings: "Configuración de búsqueda",
+                safeSearch: "Búsqueda segura",
+                instantResults: "Resultados instantáneos",
+                searchSuggestions: "Sugerencias de búsqueda",
+                appearance: "Apariencia",
+                theme: "Tema",
+                light: "Claro",
+                dark: "Oscuro",
+                ocean: "Océano",
+                forest: "Bosque",
+                midnight: "Medianoche",
+                fontSize: "Tamaño de fuente",
+                small: "Pequeño",
+                medium: "Mediano",
+                large: "Grande",
+                language: "Idioma",
+                searchLanguage: "Idioma de búsqueda",
+                uiLanguage: "Idioma de interfaz",
+                defaultSearch: "Búsqueda predeterminada",
+                defaultEngine: "Motor de búsqueda predeterminado",
+                advanced: "Avanzado",
+                resultsPerPage: "Resultados por página",
+                developerMode: "Modo desarrollador",
+                version: "Chald Search v1.0.0",
+                copyright: "© 2023 Chald. Todos los derechos reservados."
+            },
+            fr: {
+                searchPlaceholder: "Rechercher sur le web...",
+                searchBtn: "Rechercher",
+                feelingLucky: "J'ai de la chance",
+                resultsFrom: "Résultats de:",
+                aboutResults: "Environ {count} résultats",
+                settings: "Paramètres",
+                searchSettings: "Paramètres de recherche",
+                safeSearch: "Recherche sécurisée",
+                instantResults: "Résultats instantanés",
+                searchSuggestions: "Suggestions de recherche",
+                appearance: "Apparence",
+                theme: "Thème",
+                light: "Clair",
+                dark: "Sombre",
+                ocean: "Océan",
+                forest: "Forêt",
+                midnight: "Minuit",
+                fontSize: "Taille de police",
+                small: "Petit",
+                medium: "Moyen",
+                large: "Grand",
+                language: "Langue",
+                searchLanguage: "Langue de recherche",
+                uiLanguage: "Langue de l'interface",
+                defaultSearch: "Recherche par défaut",
+                defaultEngine: "Moteur de recherche par défaut",
+                advanced: "Avancé",
+                resultsPerPage: "Résultats par page",
+                developerMode: "Mode développeur",
+                version: "Chald Search v1.0.0",
+                copyright: "© 2023 Chald. Tous droits réservés."
+            },
+            de: {
+                searchPlaceholder: "Im Web suchen...",
+                searchBtn: "Suche",
+                feelingLucky: "Auf gut Glück",
+                resultsFrom: "Ergebnisse von:",
+                aboutResults: "Etwa {count} Ergebnisse",
+                settings: "Einstellungen",
+                searchSettings: "Sucheinstellungen",
+                safeSearch: "Sichere Suche",
+                instantResults: "Sofortige Ergebnisse",
+                searchSuggestions: "Suchvorschläge",
+                appearance: "Aussehen",
+                theme: "Thema",
+                light: "Hell",
+                dark: "Dunkel",
+                ocean: "Ozean",
+                forest: "Wald",
+                midnight: "Mitternacht",
+                fontSize: "Schriftgröße",
+                small: "Klein",
+                medium: "Mittel",
+                large: "Groß",
+                language: "Sprache",
+                searchLanguage: "Suchsprache",
+                uiLanguage: "Oberflächensprache",
+                defaultSearch: "Standardsuche",
+                defaultEngine: "Standard-Suchmaschine",
+                advanced: "Erweitert",
+                resultsPerPage: "Ergebnisse pro Seite",
+                developerMode: "Entwicklermodus",
+                version: "Chald Search v1.0.0",
+                copyright: "© 2023 Chald. Alle Rechte vorbehalten."
+            },
+            ja: {
+                searchPlaceholder: "ウェブを検索...",
+                searchBtn: "検索",
+                feelingLucky: "I'm Feeling Lucky",
+                resultsFrom: "検索結果:",
+                aboutResults: "約 {count} 件の結果",
+                settings: "設定",
+                searchSettings: "検索設定",
+                safeSearch: "セーフサーチ",
+                instantResults: "インスタント結果",
+                searchSuggestions: "検索候補",
+                appearance: "外観",
+                theme: "テーマ",
+                light: "ライト",
+                dark: "ダーク",
+                ocean: "オーシャン",
+                forest: "フォレスト",
+                midnight: "ミッドナイト",
+                fontSize: "フォントサイズ",
+                small: "小",
+                medium: "中",
+                large: "大",
+                language: "言語",
+                searchLanguage: "検索言語",
+                uiLanguage: "インターフェース言語",
+                defaultSearch: "デフォルト検索",
+                defaultEngine: "デフォルト検索エンジン",
+                advanced: "詳細設定",
+                resultsPerPage: "1ページあたりの結果数",
+                developerMode: "開発者モード",
+                version: "Chald Search v1.0.0",
+                copyright: "© 2023 Chald. 全著作権所有。"
+            },
+            zh: {
+                searchPlaceholder: "搜索网络...",
+                searchBtn: "搜索",
+                feelingLucky: "手气不错",
+                resultsFrom: "结果来自:",
+                aboutResults: "大约 {count} 条结果",
+                settings: "设置",
+                searchSettings: "搜索设置",
+                safeSearch: "安全搜索",
+                instantResults: "即时结果",
+                searchSuggestions: "搜索建议",
+                appearance: "外观",
+                theme: "主题",
+                light: "浅色",
+                dark: "深色",
+                ocean: "海洋",
+                forest: "森林",
+                midnight: "午夜",
+                fontSize: "字体大小",
+                small: "小",
+                medium: "中",
+                large: "大",
+                language: "语言",
+                searchLanguage: "搜索语言",
+                uiLanguage: "界面语言",
+                defaultSearch: "默认搜索",
+                defaultEngine: "默认搜索引擎",
+                advanced: "高级",
+                resultsPerPage: "每页结果数",
+                developerMode: "开发者模式",
+                version: "Chald Search v1.0.0",
+                copyright: "© 2023 Chald. 保留所有权利。"
+            }
+        };
+
+        // Current state
+        let currentProvider = localStorage.getItem('defaultProvider') || 'google';
+        let currentTheme = localStorage.getItem('theme') || 'dark';
+        let searchLanguage = localStorage.getItem('searchLanguage') || 'en';
+        let uiLanguage = localStorage.getItem('uiLanguage') || 'en';
+        let safeSearch = localStorage.getItem('safeSearch') !== 'false';
+        let instantResults = localStorage.getItem('instantResults') === 'true';
+        let searchSuggestions = localStorage.getItem('searchSuggestions') !== 'false';
+        let resultsPerPage = localStorage.getItem('resultsPerPage') || '20';
+        let developerMode = localStorage.getItem('developerMode') === 'true';
+
+        // DOM elements
+        const searchInput = document.getElementById('search-input');
+        const searchBtn = document.getElementById('search-btn');
+        const luckyBtn = document.getElementById('lucky-btn');
+        const clearSearch = document.getElementById('clear-search');
+        const resultsContainer = document.getElementById('results-container');
+        const searchResults = document.getElementById('search-results');
+        const currentProviderEl = document.getElementById('current-provider');
+        const resultCountEl = document.getElementById('result-count');
+        const providerBtns = document.querySelectorAll('.provider-btn');
+        const themeToggle = document.getElementById('theme-toggle');
+        const quickSettingsBtn = document.getElementById('quick-settings-btn');
+        const settingsPanel = document.getElementById('settings-panel');
+        const closeSettings = document.getElementById('close-settings');
+        const themeSelectors = document.querySelectorAll('.theme-selector');
+        const defaultProviderSelect = document.getElementById('default-provider');
+        const searchLanguageSelect = document.getElementById('search-language');
+        const uiLanguageSelect = document.getElementById('ui-language');
+        const safeSearchCheckbox = document.getElementById('safe-search');
+        const instantResultsCheckbox = document.getElementById('instant-results');
+        const searchSuggestionsCheckbox = document.getElementById('search-suggestions');
+        const resultsPerPageSelect = document.getElementById('results-per-page');
+        const developerModeCheckbox = document.getElementById('developer-mode');
+        const settingsOverlay = document.getElementById('settings-overlay');
+        const searchSpinner = document.getElementById('search-spinner');
+        const searchBtnText = document.getElementById('search-btn-text');
+        const fontSizeSelect = document.getElementById('font-size');
+
+        // Translate the UI
+        function translateUI(lang) {
+            const t = translations[lang] || translations['en'];
+            
+            // Search area
+            searchInput.placeholder = t.searchPlaceholder;
+            searchBtnText.textContent = t.searchBtn;
+            luckyBtn.textContent = t.feelingLucky;
+            
+            // Results area
+            document.querySelector('#results-container div span:first-child').textContent = t.resultsFrom;
+            
+            // Settings panel
+            document.querySelector('#settings-panel h2').textContent = t.settings;
+            document.querySelector('#settings-panel h3:nth-of-type(1)').innerHTML = `<i class="fas fa-search mr-2"></i> ${t.searchSettings}`;
+            document.querySelector('label[for="safe-search"]').textContent = t.safeSearch;
+            document.querySelector('label[for="instant-results"]').textContent = t.instantResults;
+            document.querySelector('label[for="search-suggestions"]').textContent = t.searchSuggestions;
+            
+            document.querySelector('#settings-panel h3:nth-of-type(2)').innerHTML = `<i class="fas fa-paint-brush mr-2"></i> ${t.appearance}`;
+            document.querySelector('#settings-panel label:nth-of-type(4)').textContent = t.theme;
+            document.querySelector('[data-theme="light"]').innerHTML = `<i class="fas fa-sun mb-1"></i> ${t.light}`;
+            document.querySelector('[data-theme="dark"]').innerHTML = `<i class="fas fa-moon mb-1"></i> ${t.dark}`;
+            document.querySelector('[data-theme="ocean"]').innerHTML = `<i class="fas fa-water mb-1"></i> ${t.ocean}`;
+            document.querySelector('[data-theme="forest"]').innerHTML = `<i class="fas fa-tree mb-1"></i> ${t.forest}`;
+            document.querySelector('[data-theme="midnight"]').innerHTML = `<i class="fas fa-stars mb-1"></i> ${t.midnight}`;
+            document.querySelector('label[for="font-size"]').textContent = t.fontSize;
+            document.querySelector('#font-size option[value="small"]').textContent = t.small;
+            document.querySelector('#font-size option[value="medium"]').textContent = t.medium;
+            document.querySelector('#font-size option[value="large"]').textContent = t.large;
+            
+            document.querySelector('#settings-panel h3:nth-of-type(3)').innerHTML = `<i class="fas fa-language mr-2"></i> ${t.language}`;
+            document.querySelector('label[for="search-language"]').textContent = t.searchLanguage;
+            document.querySelector('label[for="ui-language"]').textContent = t.uiLanguage;
+            
+            document.querySelector('#settings-panel h3:nth-of-type(4)').innerHTML = `<i class="fas fa-search mr-2"></i> ${t.defaultSearch}`;
+            document.querySelector('#settings-panel label:nth-of-type(7)').textContent = t.defaultEngine;
+            
+            document.querySelector('#settings-panel h3:nth-of-type(5)').innerHTML = `<i class="fas fa-cogs mr-2"></i> ${t.advanced}`;
+            document.querySelector('label[for="results-per-page"]').textContent = t.resultsPerPage;
+            document.querySelector('label[for="developer-mode"]').textContent = t.developerMode;
+            
+            document.querySelector('#settings-panel > div > div:last-child p:first-child').textContent = t.version;
+            document.querySelector('#settings-panel > div > div:last-child p:last-child').textContent = t.copyright;
+        }
+
+        // Initialize the UI with saved settings
+        function initializeUI() {
+            // Set active provider
+            document.querySelector(`.provider-btn[data-provider="${currentProvider}"]`).classList.add('active');
+            currentProviderEl.textContent = searchProviders[currentProvider].name;
+            
+            // Set theme
+            document.body.className = currentTheme;
+            updateThemeIcon();
+            
+            // Set checkboxes
+            safeSearchCheckbox.checked = safeSearch;
+            instantResultsCheckbox.checked = instantResults;
+            searchSuggestionsCheckbox.checked = searchSuggestions;
+            developerModeCheckbox.checked = developerMode;
+            
+            // Set selects
+            defaultProviderSelect.value = currentProvider;
+            searchLanguageSelect.value = searchLanguage;
+            uiLanguageSelect.value = uiLanguage;
+            resultsPerPageSelect.value = resultsPerPage;
+            
+            // Set active theme selector
+            document.querySelector(`.theme-selector[data-theme="${currentTheme}"]`).classList.add('active');
+            
+            // Set font size
+            const savedFontSize = localStorage.getItem('fontSize') || 'medium';
+            fontSizeSelect.value = savedFontSize;
+            applyFontSize(savedFontSize);
+            
+            // Translate UI
+            translateUI(uiLanguage);
+        }
+
+        // Update theme icon in header
+        function updateThemeIcon() {
+            const icon = themeToggle.querySelector('i');
+            if (currentTheme === 'light') {
+                icon.className = 'fas fa-sun';
+            } else {
+                icon.className = 'fas fa-moon';
+            }
+        }
+
+        // Apply font size to document
+        function applyFontSize(size) {
+            let baseSize;
+            switch(size) {
+                case 'small':
+                    baseSize = '14px';
+                    break;
+                case 'large':
+                    baseSize = '18px';
+                    break;
+                default:
+                    baseSize = '16px';
+            }
+            document.documentElement.style.fontSize = baseSize;
+        }
+
+        // Toggle settings panel
+        function toggleSettingsPanel() {
+            settingsPanel.classList.toggle('open');
+            settingsOverlay.classList.toggle('hidden');
+        }
+
+        // Perform search
+        function performSearch(query, lucky = false) {
+            if (!query.trim()) return;
+            
+            searchBtnText.textContent = translations[uiLanguage].searchBtn || 'Search';
+            searchSpinner.classList.remove('hidden');
+            
+            // Simulate search delay
+            setTimeout(() => {
+                const provider = searchProviders[currentProvider];
+                const url = lucky ? provider.luckyUrl : provider.searchUrl;
+                const safeValue = safeSearch ? 'active' : 'off';
+                
+                const finalUrl = url
+                    .replace('{query}', encodeURIComponent(query))
+                    .replace('{lang}', searchLanguage)
+                    .replace('{safe}', safeValue);
+                
+                if (currentProvider === 'chald') {
+                    // For Chald, simulate results
+                    simulateSearchResults(query);
+                    
+                    searchBtnText.textContent = translations[uiLanguage].searchBtn || 'Search';
+                    searchSpinner.classList.add('hidden');
+                } else {
+                    // For other providers, redirect to their search page
+                    window.location.href = finalUrl;
+                }
+            }, 800);
+        }
+
+        // Simulate search results for demo
+        function simulateSearchResults(query) {
+            resultsContainer.classList.remove('hidden');
+            searchResults.innerHTML = '';
+            
+            currentProviderEl.textContent = searchProviders[currentProvider].name;
+            const t = translations[uiLanguage] || translations['en'];
+            resultCountEl.textContent = t.aboutResults.replace('{count}', Math.floor(Math.random() * 1000000).toLocaleString());
+            
+            // Generate fake results
+            for (let i = 0; i < 5; i++) {
+                const resultItem = document.createElement('div');
+                resultItem.className = 'result-item p-4 rounded-lg search-result hover:shadow-lg transition-shadow';
+                
+                const title = document.createElement('h3');
+                title.className = 'text-lg font-medium text-primary mb-1';
+                title.textContent = `${query} - Result ${i+1}`;
+                
+                const url = document.createElement('div');
+                url.className = 'text-green-500 text-sm mb-1';
+                url.textContent = `https://www.example.com/${query.toLowerCase().replace(/\s+/g, '-')}-${i+1}`;
+                
+                const snippet = document.createElement('p');
+                snippet.className = 'text-secondary';
+                snippet.textContent = `This is a sample result for "${query}". In a real implementation, this would show actual search results from ${currentProvider}. Lorem ipsum dolor sit amet, consectetur adipiscing elit.`;
+                
+                resultItem.appendChild(title);
+                resultItem.appendChild(url);
+                resultItem.appendChild(snippet);
+                
+                searchResults.appendChild(resultItem);
+            }
+        }
+
+        // Event listeners
+        searchBtn.addEventListener('click', () => {
+            performSearch(searchInput.value);
+        });
+
+        luckyBtn.addEventListener('click', () => {
+            performSearch(searchInput.value, true);
+        });
+
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                performSearch(searchInput.value);
+            }
+        });
+
+        searchInput.addEventListener('input', (e) => {
+            clearSearch.classList.toggle('hidden', e.target.value === '');
+            
+            if (instantResults && e.target.value.length > 2) {
+                // In a real implementation, you would fetch suggestions here
+            }
+        });
+
+        clearSearch.addEventListener('click', () => {
+            searchInput.value = '';
+            clearSearch.classList.add('hidden');
+            searchInput.focus();
+        });
+
+        providerBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                providerBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentProvider = btn.dataset.provider;
+                currentProviderEl.textContent = searchProviders[currentProvider].name;
+                
+                if (resultsContainer.classList.contains('hidden') === false) {
+                    performSearch(searchInput.value);
+                }
+            });
+        });
+
+        themeToggle.addEventListener('click', () => {
+            currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+            document.body.className = currentTheme;
+            localStorage.setItem('theme', currentTheme);
+            updateThemeIcon();
+        });
+
+        quickSettingsBtn.addEventListener('click', toggleSettingsPanel);
+        closeSettings.addEventListener('click', toggleSettingsPanel);
+        settingsOverlay.addEventListener('click', toggleSettingsPanel);
+
+        themeSelectors.forEach(selector => {
+            selector.addEventListener('click', () => {
+                themeSelectors.forEach(s => s.classList.remove('active'));
+                selector.classList.add('active');
+                currentTheme = selector.dataset.theme;
+                document.body.className = currentTheme;
+                localStorage.setItem('theme', currentTheme);
+                updateThemeIcon();
+            });
+        });
+
+        // Settings change handlers
+        defaultProviderSelect.addEventListener('change', (e) => {
+            currentProvider = e.target.value;
+            localStorage.setItem('defaultProvider', currentProvider);
+            
+            // Update active provider button
+            providerBtns.forEach(b => b.classList.remove('active'));
+            document.querySelector(`.provider-btn[data-provider="${currentProvider}"]`).classList.add('active');
+            currentProviderEl.textContent = searchProviders[currentProvider].name;
+        });
+
+        searchLanguageSelect.addEventListener('change', (e) => {
+            searchLanguage = e.target.value;
+            localStorage.setItem('searchLanguage', searchLanguage);
+        });
+
+        uiLanguageSelect.addEventListener('change', (e) => {
+            uiLanguage = e.target.value;
+            localStorage.setItem('uiLanguage', uiLanguage);
+            translateUI(uiLanguage);
+        });
+
+        safeSearchCheckbox.addEventListener('change', (e) => {
+            safeSearch = e.target.checked;
+            localStorage.setItem('safeSearch', safeSearch);
+        });
+
+        instantResultsCheckbox.addEventListener('change', (e) => {
+            instantResults = e.target.checked;
+            localStorage.setItem('instantResults', instantResults);
+        });
+
+        searchSuggestionsCheckbox.addEventListener('change', (e) => {
+            searchSuggestions = e.target.checked;
+            localStorage.setItem('searchSuggestions', searchSuggestions);
+        });
+
+        resultsPerPageSelect.addEventListener('change', (e) => {
+            resultsPerPage = e.target.value;
+            localStorage.setItem('resultsPerPage', resultsPerPage);
+        });
+
+        developerModeCheckbox.addEventListener('change', (e) => {
+            developerMode = e.target.checked;
+            localStorage.setItem('developerMode', developerMode);
+        });
+
+        fontSizeSelect.addEventListener('change', (e) => {
+            const size = e.target.value;
+            localStorage.setItem('fontSize', size);
+            applyFontSize(size);
+        });
+
+        // Quick tips click handlers
+        document.querySelectorAll('.text-primary.cursor-pointer').forEach(el => {
+            el.addEventListener('click', () => {
+                searchInput.value = el.textContent;
+                searchInput.focus();
+            });
+        });
+
+        // Initialize the UI
+        initializeUI();
+    </script>
+</body>
+</html>
